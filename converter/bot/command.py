@@ -1,16 +1,16 @@
 import logging
-from datetime import timedelta
-from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+import time
+from base64 import b64decode
+from io import BytesIO
 
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import run_async, MessageHandler
+import requests
+from telegram import Bot, Update
+from telegram.ext import MessageHandler, run_async
 from telegram.ext.filters import Filters
 from telegram.parsemode import ParseMode
 
-
-from converter.bot.bot import converter_bot
 from converter.bot import settings
+from converter.bot.bot import converter_bot
 
 
 class Command:
@@ -25,6 +25,53 @@ class Command:
 
     @run_async
     def convert_message_handler(self, bot: Bot, update: Update):
-        update.message.reply_text('Recieved a message')
+        data = {
+            'apikey': settings.CONVERTIO_API_KEY,
+        }
+        attachment = update.message.effective_attachment
+        file = bot.get_file(attachment.file_id)
+        filename, extension = file.file_path.rstrip('/').rsplit('/', 1)[1].rsplit('.', 1)
+        data['file'] = file.file_path
+
+        if extension in ['webm', 'mov', 'mkv', 'gif']:
+            data['outputformat'] = 'mp4'
+            filename += f'.mp4'
+
+        if not data.get('outputformat'):
+            update.message.reply_text('This file format is currently not supported')
+            return
+
+        original_text = f'Converting from `{extension}` to `{data["outputformat"]}`\n'
+        sent_message = update.message.reply_text(original_text,
+                                                 parse_mode=ParseMode.MARKDOWN,
+                                                 reply_to_message_id=update.message.message_id).result()
+        try:
+            conversion = requests.post('https://api.convertio.co/convert', json=data)
+            conversion.raise_for_status()
+
+            conversion_id = conversion.json()['data']['id']
+            status = {}
+            counter = 0
+            while status.get('data', {}).get('step') != 'finish':
+                time.sleep(1)
+                status_response = requests.get(f'https://api.convertio.co/convert/{conversion_id}/status', json={})
+                status_response.raise_for_status()
+                status = status_response.json()
+                counter += 1
+
+                sent_message.edit_text(original_text + ('.' * counter), parse_mode=ParseMode.MARKDOWN)
+
+            file_response = requests.get(f'https://api.convertio.co/convert/{conversion_id}/dl/', json={})
+            file_response.raise_for_status()
+            file = file_response.json()
+            bot.send_document(chat_id=update.message.chat.id,
+                              document=BytesIO(b64decode(file['data']['content'])),
+                              filename=filename)
+
+        except Exception as e:
+            update.message.reply_text('An error occurred somewhere while converting.',
+                                      reply_message_id=update.message.message_id)
+            raise e
+
 
 command = Command()

@@ -1,6 +1,7 @@
 import logging
 
 TELEGRAM_API_TOKEN = ''
+CONVERTIO_API_KEY = ''
 
 ADMINS = ['@USERNAME']
 
