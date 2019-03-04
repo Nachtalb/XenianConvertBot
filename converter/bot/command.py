@@ -34,14 +34,19 @@ class Command:
         data['file'] = file.file_path
 
         if extension in ['webm', 'mov', 'mkv', 'gif']:
-            data['outputformat'] = 'mp4'
+            output_format = 'mp4'
             filename += f'.mp4'
+        elif extension in ['mp4']:
+            output_format = 'gif'
+            filename += f'.gif.remove_this'
 
-        if not data.get('outputformat'):
+        data['outputformat'] = output_format
+
+        if not output_format :
             update.message.reply_text('This file format is currently not supported')
             return
 
-        original_text = f'Converting from `{extension}` to `{data["outputformat"]}`\n'
+        original_text = f'Converting from `{extension}` to `{output_format}`\n'
         sent_message = update.message.reply_text(original_text,
                                                  parse_mode=ParseMode.MARKDOWN,
                                                  reply_to_message_id=update.message.message_id).result()
@@ -66,9 +71,12 @@ class Command:
             file = file_response.json()
             sent_message.edit_text(original_text + 'Finished', parse_mode=ParseMode.MARKDOWN)
             bot.send_document(chat_id=update.message.chat.id,
+                              caption='Due to TG converting `gifs` to `mp4` I added a suffix, which is to be removed'
+                                if output_format == 'gif' else '',
                               document=BytesIO(b64decode(file['data']['content'])),
                               filename=filename,
-                              reply_to_message_id=update.message.message_id)
+                              reply_to_message_id=update.message.message_id,
+                              parse_mode=ParseMode.MARKDOWN)
 
         except Exception as e:
             update.message.reply_text('An error occurred somewhere while converting.',
