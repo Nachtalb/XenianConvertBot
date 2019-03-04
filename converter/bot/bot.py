@@ -78,7 +78,6 @@ class ConverterBot:
 
     def add_command(self, handler: Type[Handler] or Handler = None, name: str = None, func: Callable = None, **kwargs):
         handler = handler or CommandHandler
-        kwargs.setdefault('filters', Filters.user(username=self.admins))
 
         if isinstance(handler, Handler):
             self.updater.dispatcher.add_handler(handler=handler)

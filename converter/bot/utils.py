@@ -2,7 +2,7 @@ import logging
 from copy import deepcopy
 
 from telegram import Bot, ParseMode, Update
-from telegram.ext import run_async
+from telegram.ext import run_async, Filters
 
 from converter.bot import settings
 from converter.bot.bot import converter_bot
@@ -17,7 +17,8 @@ class Utils:
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        converter_bot.add_command(name='settings', func=self.runtime_settings_command)
+        converter_bot.add_command(name='settings', func=self.runtime_settings_command,
+                                  filters=Filters.user(username=settings.ADMINS))
 
     @run_async
     def runtime_settings_command(self, bot: Bot, update: Update):
