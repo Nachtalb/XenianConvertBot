@@ -64,9 +64,11 @@ class Command:
             file_response = requests.get(f'https://api.convertio.co/convert/{conversion_id}/dl/', json={})
             file_response.raise_for_status()
             file = file_response.json()
+            sent_message.edit_text(original_text + 'Finished', parse_mode=ParseMode.MARKDOWN)
             bot.send_document(chat_id=update.message.chat.id,
                               document=BytesIO(b64decode(file['data']['content'])),
-                              filename=filename)
+                              filename=filename,
+                              reply_to_message_id=update.message.message_id)
 
         except Exception as e:
             update.message.reply_text('An error occurred somewhere while converting.',
