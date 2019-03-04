@@ -1,0 +1,13 @@
+recursive-include converter *
+include *.rst
+include *.py
+include LICENSE
+include development.cfg
+include main.cfg
+include production.cfg
+include versions.cfg
+
+exclude converter/bot/settings.py
+global-exclude *.pyc
+global-exclude ._*
+global-exclude *.mo
